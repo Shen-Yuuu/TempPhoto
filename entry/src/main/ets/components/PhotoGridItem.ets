@@ -1,6 +1,7 @@
 import { PhotoRecord } from '../model/PhotoRecord';
 import { TimeUtil } from '../utils/TimeUtil';
 import { Theme } from '../utils/Theme';
+import { PressScaleModifier } from '../utils/PressScaleModifier';
 import { DurationType } from '../model/DurationType';
 import { common } from '@kit.AbilityKit';
 import { uiMaterial } from '@kit.ArkUI';
@@ -21,6 +22,7 @@ export struct PhotoGridItem {
   @Param onDurationChange: (r: PhotoRecord, t: DurationType) => void = (r: PhotoRecord, t: DurationType) => {
   };
   @Local filesDir: string = '';
+  private pressModifier: PressScaleModifier = new PressScaleModifier();
   private menuMaterial: uiMaterial.ImmersiveMaterial = new uiMaterial.ImmersiveMaterial({
     style: uiMaterial.ImmersiveStyle.THIN,
     materialColor: 'rgba(247,246,243,0.72)'
@@ -118,20 +120,20 @@ export struct PhotoGridItem {
         Text(this.badgeText())
           .fontSize(10)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.record.expireAt === undefined ? Theme.FOREVER : Theme.TODAY)
-          .backgroundColor('#FFFFFF')
+          .fontColor('#FFFFFF')
+          .backgroundColor(this.record.expireAt === undefined ? Theme.FOREVER : Theme.BADGE_BG)
           .borderRadius(8)
           .padding({ left: 7, right: 7, top: 3, bottom: 3 })
           .margin(6)
-          .shadow({ radius: 4, color: 'rgba(28,26,23,0.15)', offsetY: 1 })
       }
       .width('100%')
+      .attributeModifier(this.pressModifier)
       Text(this.record.note === '' ? TimeUtil.formatShotTime(this.record.createdAt) : this.record.note)
         .fontSize(11)
         .height(16)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .fontColor(Theme.DIM)
+        .fontColor(Theme.INK2)
         .width('100%')
         .margin({ top: 6, bottom: 2 })
     }

@@ -25,6 +25,7 @@ export struct DurationSelector {
           .borderRadius(18)
           .backgroundColor(this.selected === t ? Theme.ACCENT : Theme.CARD)
           .shadow(this.pillShadow(this.selected === t))
+          .animation({ duration: 180, curve: Curve.EaseOut })
           .onClick(() => this.onSelected(t))
       }, (t: DurationType) => `${t}`)
     }

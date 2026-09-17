@@ -8,6 +8,7 @@ import { ExpiryCalculator } from '../service/ExpiryCalculator';
 import { DbHelper } from '../database/DbHelper';
 import { TimeUtil } from '../utils/TimeUtil';
 import { Theme } from '../utils/Theme';
+import { PressScaleModifier } from '../utils/PressScaleModifier';
 import { StatsHeader } from '../components/StatsHeader';
 import { PhotoGridItem } from '../components/PhotoGridItem';
 import { ShareService } from '../service/ShareService';
@@ -22,10 +23,12 @@ struct Index {
   @Local selectArmed: boolean = true;
   @Local editing: boolean = false;
   @Local selectedIds: Set<number> = new Set<number>();
+  @Local breath: boolean = false;
   @Env(ReadonlyEnvKey.WINDOW_AVOID_AREA) avoidArea: window.UIEnvWindowAvoidAreaInfoVP;
   @Env(ReadonlyEnvKey.WINDOW_SIZE) windowSize: window.SizeInVP;
   private timerId: number = -1;
   private readonly gridGap: number = 8;
+  private pressModifier: PressScaleModifier = new PressScaleModifier();
 
   @Computed
   get topInset(): number {
@@ -93,6 +96,7 @@ struct Index {
 
   aboutToAppear(): void {
     this.refresh();
+    this.breath = true;
   }
 
   onPageShow(): void {
@@ -325,6 +329,11 @@ struct Index {
   @Builder
   sectionHeader(title: string, accent: string, count: number) {
     Row({ space: 10 }) {
+      Row()
+        .width(7)
+        .height(7)
+        .borderRadius(4)
+        .backgroundColor(accent)
       Text(title)
         .fontSize(14)
         .fontWeight(FontWeight.Bold)
@@ -464,6 +473,8 @@ struct Index {
       }
       .width(84)
       .height(58)
+      .scale({ x: this.breath ? 1.04 : 1, y: this.breath ? 1.04 : 1 })
+      .animation({ duration: 1800, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
 
       Row()
         .width(110)
@@ -497,8 +508,9 @@ struct Index {
       }
       .padding({ left: 26, right: 26, top: 13, bottom: 13 })
       .borderRadius(24)
-      .backgroundColor(Theme.INK)
-      .shadow({ radius: 10, color: 'rgba(28,26,23,0.18)', offsetY: 4 })
+      .linearGradient({ angle: 90, colors: [[Theme.INK, 0.0], [Theme.INK_DEEP, 1.0]] })
+      .shadow(Theme.shadowMd())
+      .attributeModifier(this.pressModifier)
       .margin({ top: 8 })
       .onClick(() => {
         this.openCamera();
@@ -512,14 +524,15 @@ struct Index {
   build() {
     Column() {
       Row() {
-        Column({ space: 2 }) {
+        Column({ space: 3 }) {
+          Text(TimeUtil.formatHeaderDate(this.now))
+            .fontSize(11)
+            .fontColor(Theme.DIM)
+            .letterSpacing(2)
           Text('临时相机')
-            .fontSize(24)
+            .fontSize(26)
             .fontWeight(FontWeight.Bold)
             .fontColor(Theme.INK)
-          Text(TimeUtil.formatHeaderDate(this.now))
-            .fontSize(12)
-            .fontColor(Theme.DIM)
         }
         .alignItems(HorizontalAlign.Start)
 
@@ -534,6 +547,7 @@ struct Index {
             .borderRadius(15)
             .backgroundColor(Theme.CARD)
             .border({ width: 1, color: Theme.BORDER })
+            .attributeModifier(this.pressModifier)
         .onClick(() => {
           this.armSelect();
           this.toast('双指滑动照片可批量选择');
@@ -542,7 +556,7 @@ struct Index {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-      .padding({ left: 16, right: 16, top: 14 + this.topInset, bottom: 12 })
+      .padding({ left: 16, right: 16, top: 12 + this.topInset, bottom: 12 })
 
       StatsHeader({
         todayCount: this.todayList.length,
@@ -593,9 +607,9 @@ struct Index {
         } else {
           Row({ space: 8 }) {
             Row()
-              .width(8)
-              .height(8)
-              .borderRadius(4)
+              .width(9)
+              .height(9)
+              .borderRadius(5)
               .backgroundColor(Theme.ACCENT)
             Text('拍照')
               .fontSize(15)
@@ -603,8 +617,9 @@ struct Index {
           }
           .padding({ left: 36, right: 36, top: 15, bottom: 15 })
           .borderRadius(26)
-          .backgroundColor(Theme.INK)
-          .shadow({ radius: 10, color: 'rgba(28,26,23,0.18)', offsetY: 4 })
+          .linearGradient({ angle: 90, colors: [[Theme.INK, 0.0], [Theme.INK_DEEP, 1.0]] })
+          .shadow(Theme.shadowMd())
+          .attributeModifier(this.pressModifier)
           .margin({ top: 10, bottom: 18 + this.bottomInset })
           .onClick(() => {
             this.openCamera();

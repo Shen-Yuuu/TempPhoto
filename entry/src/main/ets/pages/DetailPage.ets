@@ -7,6 +7,7 @@ import { DurationType, DurationLabel } from '../model/DurationType';
 import { ExpiryCalculator } from '../service/ExpiryCalculator';
 import { TimeUtil } from '../utils/TimeUtil';
 import { Theme } from '../utils/Theme';
+import { PressScaleModifier } from '../utils/PressScaleModifier';
 import { DetailParams } from '../model/RouteParams';
 import { DurationSelector } from '../components/DurationSelector';
 import { ShareService } from '../service/ShareService';
@@ -29,6 +30,8 @@ struct DetailPage {
   private panStartY: number = 0;
   private context: common.UIAbilityContext | undefined = undefined;
   private timerId: number = -1;
+  private pressModifier: PressScaleModifier = new PressScaleModifier();
+  private readonly ringSide: number = 108;
   private barMaterial: uiMaterial.ImmersiveMaterial = new uiMaterial.ImmersiveMaterial({
     style: uiMaterial.ImmersiveStyle.THICK,
     materialColor: 'rgba(247,246,243,0.72)'
@@ -113,6 +116,28 @@ struct DetailPage {
       return '今晚 24:00 自动删除';
     }
     return `${TimeUtil.formatDayTime(r.expireAt)} 自动删除`;
+  }
+
+  private lifeColor(): string {
+    if (this.lifePercent > 50) {
+      return Theme.ACCENT;
+    }
+    if (this.lifePercent >= 20) {
+      return Theme.TODAY;
+    }
+    return Theme.DANGER;
+  }
+
+  private ringPath(pct: number): string {
+    const side = this.ringSide;
+    const radius = side / 2 - 5;
+    const center = side / 2;
+    const sweep = Math.min(359.9, Math.max(0.1, pct * 3.6));
+    const rad = sweep * Math.PI / 180;
+    const endX = center + radius * Math.sin(rad);
+    const endY = center - radius * Math.cos(rad);
+    const largeArc = sweep > 180 ? 1 : 0;
+    return `M ${center} ${center - radius} A ${radius} ${radius} 0 ${largeArc} 1 ${endX.toFixed(2)} ${endY.toFixed(2)}`;
   }
 
   private imageSide(): number {
@@ -278,6 +303,34 @@ struct DetailPage {
       });
   }
 
+  @Builder
+  actionCard(icon: Resource, label: string, color: string, enabled: boolean, onTap: () => void) {
+    Column({ space: 6 }) {
+      Image(icon)
+        .width(20)
+        .height(20)
+        .draggable(false)
+        .fillColor(color)
+      Text(label)
+        .fontSize(12)
+        .fontColor(color)
+    }
+    .layoutWeight(1)
+    .height(58)
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(14)
+    .backgroundColor(Theme.CARD)
+    .border({ width: 1, color: Theme.BORDER })
+    .shadow(Theme.shadowSm())
+    .opacity(enabled ? 1 : 0.35)
+    .attributeModifier(this.pressModifier)
+    .onClick(() => {
+      if (enabled) {
+        onTap();
+      }
+    })
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.record !== undefined) {
@@ -347,46 +400,81 @@ struct DetailPage {
             .width('100%')
             .shadow({ radius: 12, color: 'rgba(28,26,23,0.12)', offsetY: 4 })
 
-            Column({ space: 8 }) {
-              Row() {
-                Text('剩余寿命')
-                  .fontSize(12)
-                  .fontColor(Theme.DIM)
-                Blank()
-                Text(this.expireSubLabel())
-                  .fontSize(11)
-                  .fontColor(Theme.DIM)
+            Column({ space: 10 }) {
+              Row({ space: 16 }) {
+                Stack({ alignContent: Alignment.Center }) {
+                  Circle({ width: this.ringSide, height: this.ringSide })
+                    .fillOpacity(0)
+                    .stroke(Theme.TRACK)
+                    .strokeWidth(10)
+                  if (this.record.expireAt === undefined) {
+                    Circle({ width: this.ringSide, height: this.ringSide })
+                      .fillOpacity(0)
+                      .stroke(Theme.FOREVER)
+                      .strokeWidth(10)
+                    Image($r('app.media.ic_infinity'))
+                      .width(30)
+                      .height(30)
+                      .draggable(false)
+                      .fillColor(Theme.FOREVER)
+                  } else {
+                    Path()
+                      .width(this.ringSide)
+                      .height(this.ringSide)
+                      .commands(this.ringPath(this.lifePercent))
+                      .fillOpacity(0)
+                      .stroke(this.lifeColor())
+                      .strokeWidth(10)
+                      .strokeLineCap(LineCapStyle.Round)
+                    Column({ space: 2 }) {
+                      Text(`${this.lifePercent}%`)
+                        .fontSize(20)
+                        .fontWeight(FontWeight.Bold)
+                        .fontColor(this.lifeColor())
+                        .fontFeature('"tnum" on')
+                      Text('剩余')
+                        .fontSize(10)
+                        .fontColor(Theme.DIM)
+                    }
+                  }
+                }
+                .width(this.ringSide)
+                .height(this.ringSide)
+
+                Column({ space: 6 }) {
+                  Text('剩余寿命')
+                    .fontSize(12)
+                    .fontColor(Theme.DIM)
+                  if (this.record.expireAt === undefined) {
+                    Text('永久保留')
+                      .fontSize(19)
+                      .fontWeight(FontWeight.Bold)
+                      .fontColor(Theme.FOREVER)
+                      .fontFeature('"tnum" on')
+                  } else {
+                    Text(this.remainingText)
+                      .fontSize(19)
+                      .fontWeight(FontWeight.Bold)
+                      .fontColor(this.lifeColor())
+                      .fontFeature('"tnum" on')
+                  }
+                  Text(this.expireSubLabel())
+                    .fontSize(11)
+                    .fontColor(Theme.DIM)
+                    .orphanCharOptimization(true)
+                    .punctuationOverflow(true)
+                }
+                .layoutWeight(1)
+                .alignItems(HorizontalAlign.Start)
               }
               .width('100%')
-
-              if (this.record.expireAt === undefined) {
-                Text('永久保留')
-                  .fontSize(22)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor(Theme.FOREVER)
-                  .fontFeature('"tnum" on')
-              } else {
-                Stack({ alignContent: Alignment.Start }) {
-                  Row()
-                    .width('100%')
-                    .height(6)
-                    .borderRadius(3)
-                    .backgroundColor(Theme.TRACK)
-                  Row()
-                    .width(`${this.lifePercent}%`)
-                    .height(6)
-                    .borderRadius(3)
-                    .linearGradient({ angle: 90, colors: [[Theme.TODAY, 0.0], [Theme.ACCENT, 1.0]] })
-                }
-                .width('100%')
-                Text(this.remainingText)
-                  .fontSize(22)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor(Theme.ACCENT)
-                  .fontFeature('"tnum" on')
-              }
+              .alignItems(VerticalAlign.Center)
             }
             .width('100%')
+            .padding(14)
+            .borderRadius(16)
+            .backgroundColor(Theme.CARD)
+            .border({ width: 1, color: Theme.BORDER })
 
             Text(`拍摄于 ${TimeUtil.formatShotTime(this.record.createdAt)} · 寿命「${DurationLabel.labelOf(this.record.durationType)}」`)
               .fontSize(12)
@@ -436,6 +524,7 @@ struct DetailPage {
                 .backgroundColor(Theme.ACCENT)
                 .fontColor('#FFFFFF')
                 .fontSize(15)
+                .attributeModifier(this.pressModifier)
                 .onClick(() => this.sharePhoto())
               Button('存相册')
                 .layoutWeight(1)
@@ -445,55 +534,26 @@ struct DetailPage {
                 .fontColor(Theme.INK)
                 .fontSize(15)
                 .border({ width: 1.5, color: Theme.BORDER2 })
+                .attributeModifier(this.pressModifier)
                 .onClick(() => this.saveToAlbum())
             }
             .width('100%')
 
-            Row() {
-              Text('转永久')
-                .layoutWeight(1)
-                .height(52)
-                .textAlign(TextAlign.Center)
-                .fontSize(14)
-                .fontColor(Theme.INK2)
-                .opacity(this.record.expireAt === undefined ? 0.35 : 1)
-                .onClick(() => {
-                  if (this.record !== undefined && this.record.expireAt !== undefined) {
-                    this.makeForever();
-                  }
+            Row({ space: 10 }) {
+              this.actionCard($r('app.media.ic_infinity'), '转永久', Theme.INK2,
+                this.record.expireAt !== undefined, () => {
+                  this.makeForever();
                 })
-              Divider()
-                .vertical(true)
-                .height(22)
-                .color(Theme.BORDER)
-              Text('改寿命')
-                .layoutWeight(1)
-                .height(52)
-                .textAlign(TextAlign.Center)
-                .fontSize(14)
-                .fontColor(Theme.INK2)
-                .opacity(this.record.expireAt === undefined ? 0.35 : 1)
-                .onClick(() => {
-                  if (this.record !== undefined && this.record.expireAt !== undefined) {
-                    this.showDurationDialog = true;
-                  }
+              this.actionCard($r('app.media.ic_timer'), '改寿命', Theme.INK2,
+                this.record.expireAt !== undefined, () => {
+                  this.showDurationDialog = true;
                 })
-              Divider()
-                .vertical(true)
-                .height(22)
-                .color(Theme.BORDER)
-              Text('删除')
-                .layoutWeight(1)
-                .height(52)
-                .textAlign(TextAlign.Center)
-                .fontSize(14)
-                .fontColor(Theme.DANGER)
-                .onClick(() => this.deleteNow())
+              this.actionCard($r('app.media.ic_delete'), '删除', Theme.DANGER,
+                true, () => {
+                  this.deleteNow();
+                })
             }
             .width('100%')
-            .borderRadius(16)
-            .backgroundColor(Theme.CARD)
-            .border({ width: 1, color: Theme.BORDER })
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 64 + this.topInset, bottom: 24 + this.bottomInset })

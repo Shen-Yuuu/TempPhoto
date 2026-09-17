@@ -7,7 +7,14 @@ export struct StatsHeader {
   @Param foreverCount: number = 0;
 
   build() {
-    Column({ space: 10 }) {
+    Column({ space: 12 }) {
+      Row({ space: 10 }) {
+        StatsHeader.statCard(Theme.TODAY, `${this.todayCount}`, '今天清理')
+        StatsHeader.statCard(Theme.WEEK, `${this.weekCount}`, '7天内清理')
+        StatsHeader.statCard(Theme.FOREVER, `${this.foreverCount}`, '永久保留')
+      }
+      .width('100%')
+
       Row() {
         if (this.todayCount > 0) {
           Row()
@@ -37,36 +44,40 @@ export struct StatsHeader {
       .width('100%')
       .borderRadius(3)
       .clip(true)
-
-      Row({ space: 14 }) {
-        StatsHeader.legend(Theme.TODAY, '今天清理', `${this.todayCount}`)
-        StatsHeader.legend(Theme.WEEK, '7天内清理', `${this.weekCount}`)
-        StatsHeader.legend(Theme.FOREVER, '永久保留', `${this.foreverCount}`)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 2 })
   }
 
   @Builder
-  static legend(dotColor: string, label: string, count: string) {
-    Row({ space: 5 }) {
-      Row()
-        .width(6)
-        .height(6)
-        .borderRadius(3)
-        .backgroundColor(dotColor)
+  static statCard(dotColor: string, count: string, label: string) {
+    Column({ space: 6 }) {
+      Row({ space: 5 }) {
+        Row()
+          .width(7)
+          .height(7)
+          .borderRadius(4)
+          .backgroundColor(dotColor)
+        Text(count)
+          .fontSize(20)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Theme.INK)
+          .fontFeature('"tnum" on')
+      }
+      .alignItems(VerticalAlign.Center)
+
       Text(label)
         .fontSize(11)
         .fontColor(Theme.DIM)
-      Text(count)
-        .fontSize(11)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(Theme.INK)
-        .fontFeature('"tnum" on')
+        .orphanCharOptimization(true)
+        .punctuationOverflow(true)
     }
-    .alignItems(VerticalAlign.Center)
+    .layoutWeight(1)
+    .padding({ top: 12, bottom: 12 })
+    .borderRadius(14)
+    .backgroundColor(Theme.CARD)
+    .border({ width: 1, color: Theme.BORDER })
+    .shadow(Theme.shadowSm())
+    .alignItems(HorizontalAlign.Center)
   }
 }

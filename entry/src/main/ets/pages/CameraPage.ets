@@ -9,6 +9,7 @@ import { PhotoRecord } from '../model/PhotoRecord';
 import { DurationType, DurationLabel } from '../model/DurationType';
 import { DurationSelector } from '../components/DurationSelector';
 import { Theme } from '../utils/Theme';
+import { PressScaleModifier } from '../utils/PressScaleModifier';
 
 const PREF_NAME = 'camera_settings';
 const KEY_LAST_DURATION = 'last_duration';
@@ -35,6 +36,7 @@ struct CameraPage {
   private photoOutput: camera.PhotoOutput | undefined = undefined;
   private session: camera.PhotoSession | undefined = undefined;
   private focusTimerId: number = -1;
+  private pressModifier: PressScaleModifier = new PressScaleModifier();
 
   @Computed
   get topInset(): number {
@@ -392,6 +394,45 @@ struct CameraPage {
               .position({ x: this.focusX - 33, y: this.focusY - 33 })
               .opacity(0.9)
           }
+
+          Column({ space: 10 }) {
+            Stack({ alignContent: Alignment.Center }) {
+              Image(this.flashOn ? $r('app.media.ic_flash_on') : $r('app.media.ic_flash_off'))
+                .width(20)
+                .height(20)
+                .draggable(false)
+                .fillColor(this.flashOn ? '#FFFFFF' : '#55504A')
+            }
+            .width(40)
+            .height(40)
+            .borderRadius(20)
+            .backgroundColor(this.flashOn ? Theme.ACCENT : 'rgba(255,255,255,0.92)')
+            .shadow(Theme.shadowSm())
+            .attributeModifier(this.pressModifier)
+            .onClick(() => {
+              this.flashOn = !this.flashOn;
+              this.applyFlash();
+            })
+
+            Stack({ alignContent: Alignment.Center }) {
+              Image($r('app.media.ic_flip'))
+                .width(20)
+                .height(20)
+                .draggable(false)
+                .fillColor('#55504A')
+            }
+            .width(40)
+            .height(40)
+            .borderRadius(20)
+            .backgroundColor('rgba(255,255,255,0.92)')
+            .shadow(Theme.shadowSm())
+            .attributeModifier(this.pressModifier)
+            .onClick(() => {
+              this.switchCamera();
+            })
+          }
+          .position({ x: '100%', y: 0 })
+          .translate({ x: -52, y: 12 })
         }
         .layoutWeight(1)
         .width('100%')
@@ -415,42 +456,23 @@ struct CameraPage {
         })
         .margin({ top: 10 })
 
-        Row({ space: 24 }) {
-          Text(this.flashOn ? '闪光 · 开' : '闪光 · 关')
-            .fontSize(13)
-            .fontColor(Theme.INK2)
-            .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-            .onClick(() => {
-              this.flashOn = !this.flashOn;
-              this.applyFlash();
-            })
-          Text(this.isFront ? '翻转 · 后摄' : '翻转 · 前摄')
-            .fontSize(13)
-            .fontColor(Theme.INK2)
-            .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-            .onClick(() => {
-              this.switchCamera();
-            })
-        }
-        .margin({ top: 8 })
-        .justifyContent(FlexAlign.Center)
-
         Stack({ alignContent: Alignment.Center }) {
           Row()
-            .width(70)
-            .height(70)
-            .borderRadius(35)
+            .width(74)
+            .height(74)
+            .borderRadius(37)
             .backgroundColor('#FFFFFF')
             .border({ width: 3, color: Theme.ACCENT })
-            .shadow({ radius: 10, color: 'rgba(28,26,23,0.15)', offsetY: 3 })
+            .shadow(Theme.shadowMd())
           Row()
-            .width(52)
-            .height(52)
-            .borderRadius(26)
-            .backgroundColor(Theme.ACCENT)
+            .width(58)
+            .height(58)
+            .borderRadius(29)
+            .linearGradient({ angle: 135, colors: [[Theme.ACCENT_LIGHT, 0.0], [Theme.ACCENT, 1.0]] })
             .opacity(this.saving ? 0.35 : 1)
         }
         .margin({ top: 12, bottom: 16 + this.bottomInset })
+        .attributeModifier(this.pressModifier)
         .onClick(() => {
           this.capture();
         })
