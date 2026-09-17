@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "临时相机：拍完就约定什么时候删除"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "临时相机"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "临时相机"
+    },
+    {
+      "name": "camera_permission_reason",
+      "value": "用于拍摄临时照片"
+    }
+  ]
+}

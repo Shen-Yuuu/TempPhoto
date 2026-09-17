@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>临时相机 · UI 重构风格方案预览</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    background: #E8EAED;
+    font-family: "HarmonyOS Sans SC", "MiSans", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    color: #22252A;
+    padding: 48px 32px 96px;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- 页面骨架 ---------- */
+  .page-head h1 { font-size: 30px; font-weight: 700; letter-spacing: 1px; }
+  .page-head .sub { color: #61666D; font-size: 14px; line-height: 1.8; margin-top: 10px; max-width: 720px; }
+  .upgrades {
+    background: #FFFFFF; border: 1px solid #DDDFE3; border-radius: 18px;
+    padding: 22px 26px; margin: 36px 0 8px;
+  }
+  .upgrades h3 { font-size: 15px; margin-bottom: 12px; }
+  .upgrades ul { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px 28px; }
+  .upgrades li { font-size: 13px; color: #4A4E55; line-height: 1.7; padding-left: 16px; position: relative; }
+  .upgrades li::before { content: ""; position: absolute; left: 2px; top: 9px; width: 6px; height: 6px; border-radius: 2px; background: #F4511E; }
+
+  .direction { margin-top: 72px; }
+  .dir-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .dir-tag {
+    font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #fff;
+    padding: 5px 12px; border-radius: 999px;
+  }
+  .dir-head h2 { font-size: 24px; font-weight: 700; }
+  .dir-head .en { font-size: 12px; color: #9AA0A8; letter-spacing: 2px; text-transform: uppercase; }
+  .dir-desc { color: #5B6067; font-size: 13.5px; line-height: 1.9; max-width: 820px; margin: 12px 0 16px; }
+  .tokens { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; margin-bottom: 30px; }
+  .sw { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #6A6F76; }
+  .sw i { width: 15px; height: 15px; border-radius: 5px; display: inline-block; border: 1px solid rgba(0,0,0,.12); }
+  .kw { font-size: 11px; color: #6A6F76; background: #fff; border: 1px solid #D9DBDF; padding: 4px 10px; border-radius: 999px; }
+
+  .phones { display: flex; gap: 30px; flex-wrap: wrap; align-items: flex-start; }
+  figure { flex: 0 0 auto; }
+  .phone-body {
+    width: 302px; border-radius: 44px; padding: 11px; background: #0C0D0F;
+    box-shadow: 0 24px 48px -18px rgba(15, 18, 24, .38), 0 2px 6px rgba(15,18,24,.18);
+    transition: transform .25s ease;
+  }
+  figure:hover .phone-body { transform: translateY(-6px); }
+  .screen {
+    border-radius: 34px; overflow: hidden; height: 628px;
+    display: flex; flex-direction: column; position: relative;
+  }
+  figcaption { text-align: center; margin-top: 14px; font-size: 13px; font-weight: 600; color: #54595F; }
+  figcaption small { display: block; font-weight: 400; color: #9AA0A8; font-size: 11px; margin-top: 3px; }
+
+  .pc { list-style: none; display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+  .pc li { font-size: 12.5px; line-height: 1.7; padding: 10px 16px; border-radius: 12px; max-width: 420px; }
+  .pc .pro { background: #E7F3EC; color: #25603E; }
+  .pc .con { background: #F5EBE4; color: #7A4A21; }
+
+  /* ---------- 通用屏内元素 ---------- */
+  .sb { display: flex; justify-content: space-between; align-items: center; padding: 15px 24px 6px; font-size: 11.5px; font-weight: 600; }
+  .sb-r { display: flex; gap: 3px; align-items: center; }
+  .sig { width: 2.5px; height: 7px; background: currentColor; border-radius: 1px; opacity: .85; }
+  .sig.s2 { height: 9px; } .sig.s3 { height: 11px; }
+  .batt { width: 19px; height: 10px; border: 1.2px solid currentColor; border-radius: 3px; position: relative; margin-left: 3px; }
+  .batt::after { content: ""; position: absolute; top: 1.5px; bottom: 1.5px; left: 1.5px; right: 4.5px; background: currentColor; border-radius: 1px; }
+  .homebar { width: 112px; height: 4px; border-radius: 2px; margin: 9px auto 7px; flex: none; }
+
+  .cta {
+    height: 48px; border-radius: 24px; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px; letter-spacing: 3px; flex: none;
+  }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+  .cell .ph {
+    position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 14px; font-weight: 600; letter-spacing: 1px; color: rgba(255,255,255,.88);
+  }
+  .ph-park   { background: linear-gradient(148deg, #3B4351 0%, #22262E 100%); }
+  .ph-parcel { background: linear-gradient(148deg, #55422C 0%, #2C2217 100%); }
+  .ph-shelf  { background: linear-gradient(148deg, #4C5560 0%, #2C3138 100%); }
+  .ph-locker { background: linear-gradient(148deg, #35503F 0%, #1E2C24 100%); }
+  .ph-room   { background: linear-gradient(148deg, #594A63 0%, #2E2637 100%); }
+  .ph-sofa   { background: linear-gradient(148deg, #6B5637 0%, #38301F 100%); }
+  .fuse { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.14); }
+  .fuse i { display: block; height: 100%; background: linear-gradient(90deg, #FF9F1C, #FF5A1F); }
+  .fuse i.g { background: #3ECF8E; }
+  .badge {
+    position: absolute; top: 6px; right: 6px; font-size: 8.5px; font-weight: 600;
+    padding: 3px 6px; border-radius: 6px; backdrop-filter: blur(6px);
+    background: rgba(10,10,12,.55); color: #FFC46B;
+  }
+  .badge.b2 { color: #8ED8B0; }
+  .note { font-size: 9.5px; margin: 5px 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .durs { display: flex; gap: 7px; justify-content: center; flex: none; }
+  .durs span { font-size: 11.5px; padding: 7px 13px; border-radius: 999px; }
+  .hint { text-align: center; font-size: 11px; flex: none; }
+  .shutter-wrap { display: flex; align-items: center; justify-content: center; flex: none; }
+  .shutter {
+    width: 66px; height: 66px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #FFFFFF, #E9E9E9);
+    box-shadow: 0 4px 16px rgba(0,0,0,.35), inset 0 0 0 3px rgba(0,0,0,.06);
+  }
+  .life-bar { height: 5px; border-radius: 3px; overflow: hidden; }
+  .life-bar i { display: block; height: 100%; border-radius: 3px; }
+  .btn { display: flex; align-items: center; justify-content: center; font-weight: 600; border-radius: 13px; font-size: 13px; }
+
+  /* ================= 方案 A 暗房 ================= */
+  .t-a .screen { background: #141210; color: #F5F1EA; }
+  .t-a .homebar { background: rgba(255,255,255,.35); }
+  .t-a .appbar { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 22px 13px; }
+  .t-a .appbar h2 { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+  .t-a .appbar .total { font-size: 10px; color: #9C948A; letter-spacing: 1px; }
+  .t-a .stats { display: flex; gap: 8px; padding: 0 20px 14px; }
+  .t-a .stat { flex: 1; background: #1E1B18; border-radius: 15px; padding: 11px 12px 10px; }
+  .t-a .stat b { display: block; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 23px; font-weight: 600; line-height: 1.1; }
+  .t-a .stat.hot b { color: #FF9F1C; }
+  .t-a .stat i { font-style: normal; font-size: 9px; color: #9C948A; letter-spacing: .5px; }
+  .t-a .grid { padding: 0 16px; }
+  .t-a .note { color: #9C948A; }
+  .t-a .cta { margin: auto 20px 0; background: #FF5A1F; color: #fff; box-shadow: 0 8px 22px rgba(255,90,31,.35); }
+  .t-a .cta small { font-size: 10px; font-weight: 400; letter-spacing: 1px; margin-left: 8px; opacity: .85; }
+
+  .t-a .vf { flex: 1; margin: 6px 12px 0; border-radius: 22px; position: relative; overflow: hidden;
+    background: linear-gradient(172deg, #3D4553 0%, #272C36 52%, #171B22 100%); min-height: 0; }
+  .t-a .vf .scene { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%);
+    font-family: ui-monospace, Consolas, monospace; font-size: 44px; font-weight: 700; color: rgba(255,255,255,.9);
+    text-shadow: 0 4px 20px rgba(0,0,0,.5); }
+  .t-a .vf .floor { position: absolute; left: 0; right: 0; bottom: 12%; height: 1px; background: rgba(255,255,255,.14); }
+  .t-a .vf-grid { position: absolute; inset: 0; background-image:
+    linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: 100% 33.35%, 33.35% 100%; }
+  .t-a .focus-ring { position: absolute; left: 58%; top: 42%; width: 62px; height: 62px; border-radius: 8px;
+    border: 1.6px solid rgba(255,255,255,.9); box-shadow: 0 0 0 1px rgba(0,0,0,.2), 0 0 18px rgba(255,255,255,.25); }
+  .t-a .focus-ring::after { content: ""; position: absolute; inset: 24px; border-radius: 3px; background: rgba(255,255,255,.9); }
+  .t-a .vf-top { position: absolute; top: 12px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 16px; }
+  .t-a .vf-top span { width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,.4); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; color: #fff; }
+  .t-a .vf-top svg { width: 15px; height: 15px; }
+  .t-a .hint { color: #FFB74D; margin: 12px 0 10px; }
+  .t-a .durs { margin-bottom: 12px; }
+  .t-a .durs span { background: #26221E; color: #B9B0A4; }
+  .t-a .durs span.on { background: #FF5A1F; color: #fff; font-weight: 700; box-shadow: 0 4px 12px rgba(255,90,31,.4); }
+  .t-a .cam-row { display: flex; justify-content: center; gap: 26px; margin-bottom: 14px; font-size: 11.5px; color: #B9B0A4; }
+  .t-a .shutter-wrap { margin: 0 0 10px; }
+  .t-a .shutter { border: 3px solid #FF5A1F; }
+
+  .t-a .dt-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 20px 10px; }
+  .t-a .dt-head .back { font-size: 20px; color: #F5F1EA; }
+  .t-a .dt-head .ttl { font-size: 13px; color: #9C948A; letter-spacing: 2px; }
+  .t-a .dt-img { margin: 0 16px; border-radius: 18px; aspect-ratio: 4/3.4; position: relative; overflow: hidden;
+    background: linear-gradient(148deg, #55422C 0%, #2C2217 100%);
+    display: flex; align-items: center; justify-content: center; }
+  .t-a .dt-img .code { font-family: ui-monospace, Consolas, monospace; font-size: 42px; font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: 3px; }
+  .t-a .dt-life { padding: 16px 20px 0; }
+  .t-a .life-bar { background: rgba(255,255,255,.12); margin-bottom: 9px; }
+  .t-a .life-bar i { background: linear-gradient(90deg, #FF9F1C, #FF5A1F); }
+  .t-a .life-txt { display: flex; align-items: baseline; justify-content: space-between; }
+  .t-a .life-txt b { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 19px; font-weight: 600; color: #FFB74D; }
+  .t-a .life-txt span { font-size: 10px; color: #9C948A; }
+  .t-a .dt-meta { padding: 7px 20px 0; font-size: 10.5px; color: #9C948A; }
+  .t-a .dt-note { margin: 12px 20px 0; background: #1E1B18; border-radius: 12px; padding: 11px 14px; font-size: 12px; color: #EDE7DC; }
+  .t-a .dt-note small { color: #9C948A; margin-right: 8px; font-size: 10px; }
+  .t-a .dt-actions { display: flex; gap: 9px; margin: 14px 20px 0; }
+  .t-a .dt-actions .btn { height: 44px; }
+  .t-a .dt-actions .pri { flex: 1.4; background: #FF5A1F; color: #fff; }
+  .t-a .dt-actions .ghost { flex: 1; background: #26221E; color: #EDE7DC; }
+  .t-a .dt-sub { display: flex; margin: 12px 20px 0; background: #1E1B18; border-radius: 13px; overflow: hidden; }
+  .t-a .dt-sub span { flex: 1; text-align: center; padding: 12px 0; font-size: 12px; color: #D8D0C4; }
+  .t-a .dt-sub span + span { border-left: 1px solid #2A2622; }
+  .t-a .dt-sub .danger { color: #FF7A50; }
+
+  /* ================= 方案 B 清单 ================= */
+  .t-b .screen { background: #F7F6F3; color: #1C1A17; }
+  .t-b .homebar { background: rgba(28,26,23,.3); }
+  .t-b .appbar { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 22px 12px; }
+  .t-b .appbar h2 { font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+  .t-b .appbar .date { font-size: 10.5px; color: #8A857C; }
+  .t-b .dist { margin: 0 20px 6px; }
+  .t-b .dist-bar { height: 12px; border-radius: 7px; overflow: hidden; display: flex; background: #E8E5DF; }
+  .t-b .dist-bar i { height: 100%; }
+  .t-b .dist-bar .d1 { width: 30%; background: #D97706; }
+  .t-b .dist-bar .d2 { width: 50%; background: #B8B2A6; }
+  .t-b .dist-bar .d3 { width: 20%; background: #16A34A; }
+  .t-b .legend { display: flex; gap: 14px; margin-top: 9px; font-size: 10px; color: #6B665D; }
+  .t-b .legend b { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #1C1A17; margin-left: 3px; }
+  .t-b .legend .dot { width: 7px; height: 7px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: 0; }
+  .t-b .sec { display: flex; align-items: center; gap: 8px; padding: 16px 22px 10px; }
+  .t-b .sec b { font-size: 13px; font-weight: 700; }
+  .t-b .sec .chip { font-size: 9px; color: #D97706; background: #F6E8D4; padding: 3px 8px; border-radius: 999px; font-weight: 600; }
+  .t-b .sec .line { flex: 1; height: 1px; background: #E8E5DF; }
+  .t-b .grid { padding: 0 16px; }
+  .t-b .cell .ph { border-radius: 10px; box-shadow: 0 2px 8px rgba(28,26,23,.1); }
+  .t-b .badge { background: rgba(255,255,255,.92); color: #B45309; box-shadow: 0 1px 4px rgba(28,26,23,.18); }
+  .t-b .badge.b2 { color: #15803D; }
+  .t-b .note { color: #6B665D; }
+  .t-b .cta { margin: auto 20px 0; background: #1C1A17; color: #F7F6F3; }
+  .t-b .cta i { width: 8px; height: 8px; border-radius: 50%; background: #E64A19; margin-right: 9px; }
+
+  .t-b .vf { flex: 1; margin: 6px 14px 0; border-radius: 20px; position: relative; overflow: hidden;
+    background: linear-gradient(172deg, #3D4553 0%, #272C36 52%, #171B22 100%); min-height: 0;
+    box-shadow: inset 0 0 0 1px rgba(28,26,23,.08); }
+  .t-b .vf .scene { position: absolute; left: 50%; bottom: 20%; transform: translateX(-50%);
+    font-family: ui-monospace, Consolas, monospace; font-size: 44px; font-weight: 700; color: rgba(255,255,255,.9); }
+  .t-b .vf-grid { position: absolute; inset: 0; background-image:
+    linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: 100% 33.35%, 33.35% 100%; }
+  .t-b .focus-ring { position: absolute; left: 40%; top: 40%; width: 60px; height: 60px; border-radius: 8px;
+    border: 1.6px solid rgba(255,255,255,.9); }
+  .t-b .hint { color: #B45309; margin: 14px 0 10px; font-weight: 600; }
+  .t-b .durs { margin-bottom: 14px; }
+  .t-b .durs span { background: #fff; color: #55504A; box-shadow: 0 1px 4px rgba(28,26,23,.12); }
+  .t-b .durs span.on { background: #E64A19; color: #fff; font-weight: 700; }
+  .t-b .cam-row { display: flex; justify-content: center; gap: 26px; margin-bottom: 14px; font-size: 11.5px; color: #55504A; }
+  .t-b .shutter-wrap { margin: 0 0 10px; }
+  .t-b .shutter { border: 3px solid #E64A19; }
+
+  .t-b .dt-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 20px 10px; }
+  .t-b .dt-head .back { font-size: 20px; color: #1C1A17; }
+  .t-b .dt-head .ttl { font-size: 13px; color: #8A857C; letter-spacing: 2px; }
+  .t-b .dt-img { margin: 0 16px; border-radius: 16px; aspect-ratio: 4/3.4; position: relative; overflow: hidden;
+    background: linear-gradient(148deg, #55422C 0%, #2C2217 100%);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(28,26,23,.16); }
+  .t-b .dt-img .code { font-family: ui-monospace, Consolas, monospace; font-size: 42px; font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: 3px; }
+  .t-b .dt-life { padding: 16px 20px 0; }
+  .t-b .life-bar { background: #E8E5DF; margin-bottom: 9px; }
+  .t-b .life-bar i { background: linear-gradient(90deg, #D97706, #E64A19); }
+  .t-b .life-txt { display: flex; align-items: baseline; justify-content: space-between; }
+  .t-b .life-txt b { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 19px; font-weight: 600; color: #B45309; }
+  .t-b .life-txt span { font-size: 10px; color: #8A857C; }
+  .t-b .dt-meta { padding: 7px 20px 0; font-size: 10.5px; color: #8A857C; }
+  .t-b .dt-note { margin: 12px 20px 0; background: #fff; border: 1px solid #E8E5DF; border-radius: 12px; padding: 11px 14px; font-size: 12px; }
+  .t-b .dt-note small { color: #8A857C; margin-right: 8px; font-size: 10px; }
+  .t-b .dt-actions { display: flex; gap: 9px; margin: 14px 20px 0; }
+  .t-b .dt-actions .btn { height: 44px; }
+  .t-b .dt-actions .pri { flex: 1.4; background: #E64A19; color: #fff; }
+  .t-b .dt-actions .ghost { flex: 1; background: #fff; color: #1C1A17; border: 1.5px solid #DDD9D0; }
+  .t-b .dt-sub { display: flex; margin: 12px 20px 0; background: #fff; border: 1px solid #E8E5DF; border-radius: 13px; overflow: hidden; }
+  .t-b .dt-sub span { flex: 1; text-align: center; padding: 12px 0; font-size: 12px; color: #55504A; }
+  .t-b .dt-sub span + span { border-left: 1px solid #E8E5DF; }
+  .t-b .dt-sub .danger { color: #DC2626; }
+
+  /* ================= 方案 C 昼夜 ================= */
+  .t-c .screen { background: #F2F4F7; color: #17191D; }
+  .t-c .homebar { background: rgba(23,25,29,.3); }
+  .t-c .hero { padding: 6px 22px 0; }
+  .t-c .hero .eyebrow { font-size: 9.5px; letter-spacing: 3px; color: #8A9099; font-weight: 700; }
+  .t-c .hero h2 { font-size: 25px; font-weight: 800; line-height: 1.35; margin-top: 7px; }
+  .t-c .hero h2 em { font-style: normal; color: #F4511E; }
+  .t-c .chips { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
+  .t-c .chips span { font-size: 10px; padding: 6px 11px; border-radius: 999px; background: #fff; color: #4A5058; box-shadow: 0 1px 4px rgba(23,25,29,.08); }
+  .t-c .chips b { font-family: ui-monospace, Consolas, monospace; color: #17191D; }
+  .t-c .chips .c1 { border-top: 2.5px solid #FF9F1C; }
+  .t-c .chips .c2 { border-top: 2.5px solid #7A8699; }
+  .t-c .chips .c3 { border-top: 2.5px solid #3ECF8E; }
+  .t-c .grid { padding: 14px 16px 0; }
+  .t-c .cell .ph { border-radius: 14px; }
+  .t-c .badge { background: rgba(10,12,16,.6); backdrop-filter: blur(6px); color: #FFC46B; }
+  .t-c .badge.b2 { color: #8ED8B0; }
+  .t-c .note { color: #8A9099; }
+  .t-c .cta { margin: auto 20px 0; background: #17191D; color: #fff;
+    box-shadow: 0 10px 24px rgba(23,25,29,.28); letter-spacing: 2px; }
+  .t-c .cta i { width: 9px; height: 9px; border-radius: 50%; background: #F4511E; margin-right: 9px; }
+
+  .t-c .vfwrap { flex: 1; background: #0A0A0A; margin-top: 6px; display: flex; flex-direction: column; min-height: 0; }
+  .t-c .vf { flex: 1; position: relative; overflow: hidden;
+    background: linear-gradient(172deg, #3D4553 0%, #272C36 52%, #171B22 100%); min-height: 0; }
+  .t-c .vf .scene { position: absolute; left: 50%; bottom: 20%; transform: translateX(-50%);
+    font-family: ui-monospace, Consolas, monospace; font-size: 44px; font-weight: 700; color: rgba(255,255,255,.9); }
+  .t-c .vf-grid { position: absolute; inset: 0; background-image:
+    linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: 100% 33.35%, 33.35% 100%; }
+  .t-c .vf-top { position: absolute; top: 10px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 14px; color: #fff; }
+  .t-c .vf-top .x { font-size: 16px; }
+  .t-c .vf-top .live { font-size: 9px; letter-spacing: 2px; border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 4px 10px; }
+  .t-c .vf-top .flip { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.16);
+    display: flex; align-items: center; justify-content: center; }
+  .t-c .vf-top svg { width: 14px; height: 14px; }
+  .t-c .hint { color: #FFB74D; margin: 12px 0 9px; }
+  .t-c .durs { margin-bottom: 12px; }
+  .t-c .durs span { background: rgba(255,255,255,.1); color: #B7BCC4; }
+  .t-c .durs span.on { background: #F4511E; color: #fff; font-weight: 700; }
+  .t-c .cam-bottom { display: flex; align-items: center; justify-content: space-between; padding: 0 34px 12px; flex: none; }
+  .t-c .lastshot { width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.5);
+    background: linear-gradient(148deg, #55422C 0%, #2C2217 100%); }
+  .t-c .shutter { width: 62px; height: 62px; border: 3px solid #fff; }
+  .t-c .flip2 { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff;
+    display: flex; align-items: center; justify-content: center; }
+  .t-c .flip2 svg { width: 17px; height: 17px; }
+  .t-c .darkzone { background: #0A0A0A; color: #fff; }
+
+  .t-c .dt-img { height: 252px; background: #0A0A0A; position: relative; overflow: hidden; flex: none;
+    background: linear-gradient(172deg, #55422C 0%, #2C2217 78%); }
+  .t-c .dt-img .code { position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%);
+    font-family: ui-monospace, Consolas, monospace; font-size: 48px; font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: 3px; }
+  .t-c .dt-img .back { position: absolute; top: 14px; left: 18px; width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,.4); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .t-c .sheet { flex: 1; background: #fff; border-radius: 26px 26px 0 0; margin-top: -24px; position: relative;
+    display: flex; flex-direction: column; box-shadow: 0 -8px 30px rgba(23,25,29,.18); }
+  .t-c .sheet .grab { width: 40px; height: 4px; border-radius: 2px; background: #E2E5EA; margin: 10px auto 0; }
+  .t-c .life-line { display: flex; align-items: center; gap: 12px; padding: 14px 22px 0; }
+  .t-c .ring { width: 46px; height: 46px; border-radius: 50%; flex: none;
+    background: conic-gradient(#FF9F1C 0 22%, #EDEFF2 22% 100%);
+    display: flex; align-items: center; justify-content: center; }
+  .t-c .ring i { width: 36px; height: 36px; border-radius: 50%; background: #fff; display: block; }
+  .t-c .life-line b { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 20px; font-weight: 600; color: #C2410C; display: block; }
+  .t-c .life-line span { font-size: 10px; color: #8A9099; }
+  .t-c .dt-note { margin: 12px 22px 0; background: #F2F4F7; border-radius: 12px; padding: 11px 14px; font-size: 12px; }
+  .t-c .dt-note small { color: #8A9099; margin-right: 8px; font-size: 10px; }
+  .t-c .dt-actions { display: flex; gap: 9px; margin: 14px 22px 0; }
+  .t-c .dt-actions .btn { height: 44px; }
+  .t-c .dt-actions .pri { flex: 1.4; background: #F4511E; color: #fff; }
+  .t-c .dt-actions .ghost { flex: 1; background: #F2F4F7; color: #17191D; }
+  .t-c .dt-sub { display: flex; justify-content: space-around; margin: 13px 10px 0; }
+  .t-c .dt-sub span { font-size: 11.5px; color: #4A5058; padding: 6px 10px; }
+  .t-c .dt-sub .danger { color: #DC2626; }
+
+  footer.page-foot { margin-top: 80px; text-align: center; color: #7A8087; font-size: 13px; line-height: 2; }
+  footer.page-foot b { color: #22252A; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .phone-body { transition: none; }
+    figure:hover .phone-body { transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <h1>「临时相机」UI 重构 · 风格方案预览</h1>
+    <p class="sub">三个候选方向，每个方向展示三个核心页面（首页 / 相机页 / 详情页）的高保真布局稿。以下所有方案共享同一批"通用升级点"，选定方向后将原样落地为 ArkUI 实现，不改业务逻辑。</p>
+    <div class="upgrades">
+      <h3>通用升级点（无论选哪个方向都会做）</h3>
+      <ul>
+        <li>设计 token 化：统一色板、圆角体系（8/12/16/24）、4pt 间距网格、字阶（10/12/14/16/22/28）</li>
+        <li>倒计时全部改用等宽数字（tabular mono），精确到分钟，读数不再抖动</li>
+        <li>寿命余量可视化：每张照片都能一眼看出"还剩多少生命"（余量条 / 进度环）</li>
+        <li>空态与权限引导页重设计：插画 + 单一行动点，替代纯文字</li>
+        <li>状态栏沉浸处理；相机页全屏取景；触控目标 ≥ 44vp</li>
+        <li>信息架构调整：宫格长按快捷菜单（分享 / 存相册 / 删除）</li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- ============ 方案 A ============ -->
+  <section class="direction" id="a">
+    <div class="dir-head">
+      <span class="dir-tag" style="background:#FF5A1F;">方案 A</span>
+      <h2>暗房 Darkroom</h2>
+      <span class="en">全暗色 · 相机语言</span>
+    </div>
+    <p class="dir-desc">整套应用沿用专业相机的暗房语言：暖调炭黑底、快门橙作唯一强调色。签名元素是每张照片底部的<strong>"寿命引线"</strong>——一条随剩余时间缩短的琥珀色细条，照片像定时装置一样在眼前"燃尽"。倒计时与统计数字全部使用等宽数字，强化计时器的机械感。适合强调"这是一台相机，不是一个相册"。</p>
+    <div class="tokens">
+      <span class="sw"><i style="background:#141210;"></i>#141210 底</span>
+      <span class="sw"><i style="background:#1E1B18;"></i>#1E1B18 面</span>
+      <span class="sw"><i style="background:#FF9F1C;"></i>#FF9F1C 引线</span>
+      <span class="sw"><i style="background:#FF5A1F;"></i>#FF5A1F 主行动</span>
+      <span class="sw"><i style="background:#3ECF8E;"></i>#3ECF8E 永久</span>
+      <span class="kw">等宽数字</span><span class="kw">寿命引线</span><span class="kw">沉浸取景</span>
+    </div>
+    <div class="phones">
+      <figure>
+        <div class="phone-body t-a">
+          <div class="screen">
+            <div class="sb"><span>9:41</span><span class="sb-r"><i class="sig"></i><i class="sig s2"></i><i class="sig s3"></i><i class="batt"></i></span></div>
+            <div class="appbar"><h2>临时相机</h2><span class="total">6 张在册</span></div>
+            <div class="stats">
+              <div class="stat hot"><b>2</b><i>今天将清理</i></div>
+              <div class="stat"><b>3</b><i>7天内将清理</i></div>
+              <div class="stat"><b>1</b><i>永久保留</i></div>
+            </div>
+            <div class="grid">
+              <div class="cell"><div class="ph ph-park">P<div class="fuse"><i style="width:32%;"></i></div><span class="badge">今晚24:00</span></div><div class="note">停车 B2-17</div></div>
+              <div class="cell"><div class="ph ph-parcel">8-2-301<div class="fuse"><i style="width:18%;"></i></div><span class="badge">剩2小时13分</span></div><div class="note">取件码</div></div>
+              <div class="cell"><div class="ph ph-shelf">A-12<div class="fuse"><i style="width:46%;"></i></div><span class="badge">剩3天</span></div><div class="note">货架位置</div></div>
+              <div class="cell"><div class="ph ph-locker">3F-08<div class="fuse"><i style="width:82%;"></i></div><span class="badge">剩6天</span></div><div class="note">3号储物柜</div></div>
+              <div class="cell"><div class="ph ph-room">6216<div class="fuse"><i class="g" style="width:100%;"></i></div><span class="badge b2">永久</span></div><div class="note">酒店房卡</div></div>
+              <div class="cell"><div class="ph ph-sofa">120×80<div class="fuse"><i style="width:68%;"></i></div><span class="badge">剩5天</span></div><div class="note">沙发尺寸</div></div>
+            </div>
+            <div class="cta">拍照<small>不进系统相册</small></div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+        <figcaption>首页<small>三桶统计 · 寿命引线宫格</small></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone-body t-a">
+          <div class="screen">
+            <div class="sb"><span>9:41</span><span class="sb-r"><i class="sig"></i><i class="sig s2"></i><i class="sig s3"></i><i class="batt"></i></span></div>
+            <div class="vf">
+              <div class="vf-grid"></div>
+              <div class="floor"></div>
+              <div class="scene">P</div>
+              <div class="focus-ring"></div>
+              <div class="vf-top">
+                <span><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor"/></svg></span>
+                <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 13.6-5.7M20 12a8 8 0 0 1-13.6 5.7"/><path d="M17.8 2.6v3.9h-3.9M6.2 21.4v-3.9h3.9"/></svg></span>
+              </div>
+            </div>
+            <div class="hint">已选「今天」· 今晚 24:00 自动删除</div>
+            <div class="durs"><span>1小时</span><span class="on">今天</span><span>3天</span><span>7天</span><span>永久</span></div>
+            <div class="cam-row"><span>闪光 · 关</span><span>翻转镜头</span></div>
+            <div class="shutter-wrap"><span class="shutter"></span></div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+        <figcaption>相机页<small>沉浸取景 · 点击对焦 · 连拍不退出</small></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone-body t-a">
+          <div class="screen">
+            <div class="sb"><span>9:41</span><span class="sb-r"><i class="sig"></i><i class="sig s2"></i><i class="sig s3"></i><i class="batt"></i></span></div>
+            <div class="dt-head"><span class="back">‹</span><span class="ttl">详情</span><span style="width:12px;"></span></div>
+            <div class="dt-img"><span class="code">8-2-301</span></div>
+            <div class="dt-life">
+              <div class="life-bar"><i style="width:18%;"></i></div>
+              <div class="life-txt"><b>剩 02:13:07</b><span>今晚 24:00 删除</span></div>
+            </div>
+            <div class="dt-meta">拍摄于 2026-09-16 09:12 · 寿命「今天」</div>
+            <div class="dt-note"><small>备注</small>取件码 · 中通驿站</div>
+            <div class="dt-actions"><span class="btn pri">分享</span><span class="btn ghost">存相册</span></div>
+            <div class="dt-sub"><span>转永久</span><span>改寿命</span><span class="danger">删除</span></div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+        <figcaption>详情页<small>寿命引线 + 等宽倒计时 · 双指缩放</small></figcaption>
+      </figure>
+    </div>
+    <ul class="pc">
+      <li class="pro">＋ 与"相机工具"心智完全一致，相机-首页-详情视觉贯通；倒计时/引线在暗底上最醒目，"燃尽感"直击"临时"主题</li>
+      <li class="con">－ 长时间浏览宫格的舒适度低于浅色；亮环境下屏幕反光时可读性略降</li>
+    </ul>
+  </section>
+
+  <!-- ============ 方案 B ============ -->
+  <section class="direction" id="b">
+    <div class="dir-head">
+      <span class="dir-tag" style="background:#1C1A17;">方案 B</span>
+      <h2>清单 Checklist</h2>
+      <span class="en">暖纸浅色 · 管理优先</span>
+    </div>
+    <p class="dir-desc">把应用当成一张"待办清单"来设计：暖纸白底、墨色文字、品牌橙只出现在行动点。签名元素是首页顶部的<strong>"寿命分布条"</strong>——一根按三桶比例分段的横条，照片存量的整体态势一眼可读；宫格按到期日分组（今天 / 更早），像整理票据一样管理临时照片。适合照片数量多、以"查和管理"为主的使用方式。</p>
+    <div class="tokens">
+      <span class="sw"><i style="background:#F7F6F3;"></i>#F7F6F3 底</span>
+      <span class="sw"><i style="background:#FFFFFF;"></i>#FFFFFF 卡</span>
+      <span class="sw"><i style="background:#1C1A17;"></i>#1C1A17 墨</span>
+      <span class="sw"><i style="background:#D97706;"></i>#D97706 今日</span>
+      <span class="sw"><i style="background:#E64A19;"></i>#E64A19 行动</span>
+      <span class="kw">分布条</span><span class="kw">到期分组</span><span class="kw">纸感留白</span>
+    </div>
+    <div class="phones">
+      <figure>
+        <div class="phone-body t-b">
+          <div class="screen">
+            <div class="sb"><span>9:41</span><span class="sb-r"><i class="sig"></i><i class="sig s2"></i><i class="sig s3"></i><i class="batt"></i></span></div>
+            <div class="appbar"><h2>临时相机</h2><span class="date">9月16日 周三</span></div>
+            <div class="dist">
+              <div class="dist-bar"><i class="d1"></i><i class="d2"></i><i class="d3"></i></div>
+              <div class="legend">
+                <span><i class="dot" style="background:#D97706;"></i>今天清理<b>2</b></span>
+                <span><i class="dot" style="background:#B8B2A6;"></i>7天内<b>3</b></span>
+                <span><i class="dot" style="background:#16A34A;"></i>永久<b>1</b></span>
+              </div>
+            </div>
+            <div class="sec"><b>今天到期</b><span class="chip">2 张</span><span class="line"></span></div>
+            <div class="grid">
+              <div class="cell"><div class="ph ph-park">P<span class="badge">今晚24:00</span></div><div class="note">停车 B2-17</div></div>
+              <div class="cell"><div class="ph ph-parcel">8-2-301<span class="badge">剩2小时</span></div><div class="note">取件码</div></div>
+            </div>
+            <div class="sec"><b>更早到期</b><span class="chip">3 张</span><span class="line"></span></div>
+            <div class="grid">
+              <div class="cell"><div class="ph ph-shelf">A-12<span class="badge">剩3天</span></div><div class="note">货架位置</div></div>
+              <div class="cell"><div class="ph ph-locker">3F-08<span class="badge">剩6天</span></div><div class="note">3号储物柜</div></div>
+              <div class="cell"><div class="ph ph-sofa">120×80<span class="badge">剩5天</span></div><div class="note">沙发尺寸</div></div>
+            </div>
+            <div class="cta"><i></i>拍照</div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+        <figcaption>首页<small>寿命分布条 · 按到期日分组</small></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone-body t-b">
+          <div class="screen">
+            <div class="sb"><span>9:41</span><span class="sb-r"><i class="sig"></i><i class="sig s2"></i><i class="sig s3"></i><i class="batt"></i></span></div>
+            <div class="vf">
+              <div class="vf-grid"></div>
+              <div class="scene">P</div>
+              <div class="focus-ring"></div>
+            </div>
+            <div class="hint">已选「今天」· 今晚 24:00 自动删除</div>
+            <div class="durs"><span>1小时</span><span class="on">今天</span><span>3天</span><span>7天</span><span>永久</span></div>
+            <div class="cam-row"><span>闪光 · 关</span><span>翻转镜头</span></div>
+            <div class="shutter-wrap"><span class="shutter"></span></div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+        <figcaption>相机页<small>浅色控制区 + 圆角取景窗</small></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone-body t-b">
+          <div class="screen">
+            <div class="sb"><span>9:41</span><span class="sb-r"><i class="sig"></i><i class="sig s2"></i><i class="sig s3"></i><i class="batt"></i></span></div>
+            <div class="dt-head"><span class="back">‹</span><span class="ttl">详情</span><span style="width:12px;"></span></div>
+            <div class="dt-img"><span class="code">8-2-301</span></div>
+            <div class="dt-life">
+              <div class="life-bar"><i style="width:18%;"></i></div>
+              <div class="life-txt"><b>剩 2小时13分</b><span>今晚 24:00 删除</span></div>
+            </div>
+            <div class="dt-meta">拍摄于 2026-09-16 09:12 · 寿命「今天」</div>
+            <div class="dt-note"><small>备注</small>取件码 · 中通驿站</div>
+            <div class="dt-actions"><span class="btn pri">分享</span><span class="btn ghost">存相册</span></div>
+            <div class="dt-sub"><span>转永久</span><span>改寿命</span><span class="danger">删除</span></div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+        <figcaption>详情页<small>白卡浮层 · 分组操作条</small></figcaption>
+      </figure>
+    </div>
+    <ul class="pc">
+      <li class="pro">＋ 浏览与管理最舒适，信息密度最友好；分布条对存量态势的表达是三案中最直观的</li>
+      <li class="con">－ 与"相机工具"的气质契合度一般，相机页在浅色框架中沉浸感最弱；差异化记忆点偏少</li>
+    </ul>
+  </section>
+
+  <!-- ============ 方案 C ============ -->
+  <section class="direction" id="c">
+    <div class="dir-head">
+      <span class="dir-tag" style="background:#17191D;">方案 C</span>
+      <h2>昼夜 Day &amp; Night</h2>
+      <span class="en">浅色首页 · 沉浸深色拍摄与详情</span>
+    </div>
+    <p class="dir-desc">白天是清单，夜晚是暗房：首页与列表保持清爽冷白，进入相机与详情的瞬间切换为纯黑沉浸态，形成"日常管理 / 专注拍摄"的昼夜分界。签名元素有二：首页以<strong>大字宣言</strong>（"拍一张，<em>今天就会消失</em>的照片"）替代常规标题；详情页改为<strong>底部抽屉（Bottom Sheet）</strong>——大图沉在纯黑里，信息与操作收进白色圆角抽屉，剩余寿命用进度环表达。三案中交互最现代的一版。</p>
+    <div class="tokens">
+      <span class="sw"><i style="background:#F2F4F7;"></i>#F2F4F7 日</span>
+      <span class="sw"><i style="background:#0A0A0A;"></i>#0A0A0A 夜</span>
+      <span class="sw"><i style="background:#F4511E;"></i>#F4511E 行动</span>
+      <span class="sw"><i style="background:#17191D;"></i>#17191D 墨</span>
+      <span class="sw"><i style="background:#3ECF8E;"></i>#3ECF8E 永久</span>
+      <span class="kw">昼夜分界</span><span class="kw">底部抽屉</span><span class="kw">寿命进度环</span>
+    </div>
+    <div class="phones">
+      <figure>
+        <div class="phone-body t-c">
+          <div class="screen">
+            <div class="sb"><span>9:41</span><span class="sb-r"><i class="sig"></i><i class="sig s2"></i><i class="sig s3"></i><i class="batt"></i></span></div>
+            <div class="hero">
+              <div class="eyebrow">TEMP CAMERA</div>
+              <h2>拍一张，<br><em>今天就会消失</em>的照片</h2>
+              <div class="chips">
+                <span class="c1">今天清理 <b>2</b></span>
+                <span class="c2">7天内 <b>3</b></span>
+                <span class="c3">永久 <b>1</b></span>
+              </div>
+            </div>
+            <div class="grid">
+              <div class="cell"><div class="ph ph-park">P<span class="badge">今晚24:00</span></div><div class="note">停车 B2-17</div></div>
+              <div class="cell"><div class="ph ph-parcel">8-2-301<span class="badge">剩2小时13分</span></div><div class="note">取件码</div></div>
+              <div class="cell"><div class="ph ph-shelf">A-12<span class="badge">剩3天</span></div><div class="note">货架位置</div></div>
+              <div class="cell"><div class="ph ph-locker">3F-08<span class="badge">剩6天</span></div><div class="note">3号储物柜</div></div>
+              <div class="cell"><div class="ph ph-room">6216<span class="badge b2">永久</span></div><div class="note">酒店房卡</div></div>
+              <div class="cell"><div class="ph ph-sofa">120×80<span class="badge">剩5天</span></div><div class="note">沙发尺寸</div></div>
+            </div>
+            <div class="cta"><i></i>拍照</div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+        <figcaption>首页<small>大字宣言 · 顶色条统计胶囊</small></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone-body t-c">
+          <div class="screen" style="background:#0A0A0A; color:#fff;">
+            <div class="sb"><span>9:41</span><span class="sb-r"><i class="sig"></i><i class="sig s2"></i><i class="sig s3"></i><i class="batt"></i></span></div>
+            <div class="vfwrap">
+              <div class="vf">
+                <div class="vf-grid"></div>
+                <div class="scene">P</div>
+                <div class="vf-top">
+                  <span class="x">✕</span>
+                  <span class="live">REHEARSAL · 点击对焦</span>
+                  <span class="flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 13.6-5.7M20 12a8 8 0 0 1-13.6 5.7"/><path d="M17.8 2.6v3.9h-3.9M6.2 21.4v-3.9h3.9"/></svg></span>
+                </div>
+              </div>
+              <div class="hint">已选「今天」· 今晚 24:00 自动删除</div>
+              <div class="durs"><span>1小时</span><span class="on">今天</span><span>3天</span><span>7天</span><span>永久</span></div>
+              <div class="cam-bottom">
+                <span class="lastshot"></span>
+                <span class="shutter"></span>
+                <span class="flip2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 13.6-5.7M20 12a8 8 0 0 1-13.6 5.7"/><path d="M17.8 2.6v3.9h-3.9M6.2 21.4v-3.9h3.9"/></svg></span>
+              </div>
+              <div class="homebar" style="background:rgba(255,255,255,.35);"></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>相机页<small>纯黑沉浸 · 最近拍摄缩略图 + 大快门</small></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone-body t-c">
+          <div class="screen" style="background:#0A0A0A;">
+            <div class="dt-img">
+              <div class="sb" style="position:absolute; top:0; left:0; right:0; color:#fff;"><span>9:41</span><span class="sb-r"><i class="sig"></i><i class="sig s2"></i><i class="sig s3"></i><i class="batt"></i></span></div>
+              <span class="code">8-2-301</span>
+              <span class="back">‹</span>
+            </div>
+            <div class="sheet">
+              <div class="grab"></div>
+              <div class="life-line">
+                <div class="ring"><i></i></div>
+                <div><b>剩 2小时13分</b><span>今晚 24:00 自动删除 · 双指缩放查看</span></div>
+              </div>
+              <div class="dt-note"><small>备注</small>取件码 · 中通驿站</div>
+              <div class="dt-actions"><span class="btn pri">分享</span><span class="btn ghost">存相册</span></div>
+              <div class="dt-sub"><span>转永久</span><span>改寿命</span><span class="danger">删除</span></div>
+              <div class="homebar" style="background:#E2E5EA; margin-top:auto;"></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>详情页<small>纯黑大图 + 白色底部抽屉 + 寿命进度环</small></figcaption>
+      </figure>
+    </div>
+    <ul class="pc">
+      <li class="pro">＋ 各取所长：管理舒适、拍摄沉浸；底部抽屉 + 进度环的详情页交互最现代，分享场景的仪式感最强</li>
+      <li class="con">－ 需要维护日/夜两套色板；页面间明暗切换存在视觉跳变，统一性弱于 A</li>
+    </ul>
+  </section>
+
+  <footer class="page-foot">
+    <p>回复 <b>方案 A / B / C</b> 即可选定方向；也可以指定混搭（如"A 的暗房首页 + C 的抽屉详情页"）。</p>
+    <p>选定后将以 ArkUI 状态管理 V2 落地：Index / CameraPage / DetailPage + StatsHeader / PhotoGridItem / DurationSelector 全部按稿重写样式层，业务逻辑不动。</p>
+  </footer>
+</div>
+</body>
+</html>
