@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from '@ohos/hypium';
+import { describe, it, expect, beforeAll, afterEach } from '@ohos/hypium';
 import { abilityDelegatorRegistry } from '@kit.TestKit';
 import { common } from '@kit.AbilityKit';
 import { DbHelper } from '../../../main/ets/database/DbHelper';
@@ -19,10 +19,19 @@ function makeRecord(expireAt: number | undefined): PhotoRecord {
 export default function sweepTest() {
   describe('SweepTest', () => {
     let appContext: common.Context | undefined = undefined;
+    // 测试直接使用真实 DB 文件，插入的记录必须在结束后清理，避免污染应用数据
+    const insertedIds: Array<number> = [];
 
     beforeAll(async () => {
       appContext = abilityDelegatorRegistry.getAbilityDelegator().getAppContext();
       await DbHelper.init(appContext);
+    });
+
+    afterEach(async () => {
+      for (const id of insertedIds) {
+        await DbHelper.deleteById(id);
+      }
+      insertedIds.length = 0;
     });
 
     it('sweepDeletesExpiredKeepsForeverAndFuture', 0, async () => {
@@ -33,6 +42,7 @@ export default function sweepTest() {
       const expiredId = await DbHelper.insert(expired);
       const foreverId = await DbHelper.insert(forever);
       const futureId = await DbHelper.insert(future);
+      insertedIds.push(expiredId, foreverId, futureId);
       expect(expiredId > 0).assertTrue();
 
       const deleted = await CleanupService.sweepExpired(appContext as common.Context);
@@ -46,6 +56,7 @@ export default function sweepTest() {
     it('setForeverExcludesFromSweep', 0, async () => {
       const soonExpired = makeRecord(Date.now() + 60_000);
       const id = await DbHelper.insert(soonExpired);
+      insertedIds.push(id);
       await DbHelper.setForever(id);
       const deleted = await CleanupService.sweepExpired(appContext as common.Context);
       expect(deleted === 0).assertTrue();

@@ -22,7 +22,7 @@ export class CleanupService {
         deleted += rows;
       }
     }
-    await CleanupService.sweepOrphans(context);
+    await CleanupService.reconcile(context);
     if (deleted > 0) {
       hilog.info(DOMAIN, TAG, 'sweepExpired deleted %{public}d photos', deleted);
     }
@@ -43,18 +43,32 @@ export class CleanupService {
     }
   }
 
-  private static async sweepOrphans(context: common.Context): Promise<void> {
+  // 双向对账：删除"有记录无文件"且超过宽限期的残留记录；回收"有文件无记录"的孤儿文件
+  private static async reconcile(context: common.Context): Promise<void> {
     try {
       const root = `${context.filesDir}/${PHOTO_ROOT}`;
-      if (!fs.accessSync(root)) {
-        return;
-      }
+      const cutoff = Date.now() - ORPHAN_GRACE_MS;
       const known = new Set<string>();
       const all = await DbHelper.listAll();
       for (const r of all) {
+        let exists = true;
+        try {
+          exists = fs.accessSync(`${context.filesDir}/${r.filePath}`);
+        } catch (err) {
+          exists = false;
+        }
+        if (!exists && r.createdAt < cutoff) {
+          const rows = await DbHelper.deleteById(r.id);
+          if (rows > 0) {
+            hilog.info(DOMAIN, TAG, 'missing-file record removed: %{public}s', r.filePath);
+            continue;
+          }
+        }
         known.add(r.filePath);
       }
-      const cutoff = Date.now() - ORPHAN_GRACE_MS;
+      if (!fs.accessSync(root)) {
+        return;
+      }
       const dayDirs = fs.listFileSync(root);
       for (const day of dayDirs) {
         const dayDir = `${root}/${day}`;
@@ -80,7 +94,7 @@ export class CleanupService {
         }
       }
     } catch (err) {
-      hilog.warn(DOMAIN, TAG, 'orphan scan failed: %{public}s', `${err}`);
+      hilog.warn(DOMAIN, TAG, 'reconcile failed: %{public}s', `${err}`);
     }
   }
 }

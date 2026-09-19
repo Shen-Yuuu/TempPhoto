@@ -37,24 +37,18 @@ export struct PhotoGridItem {
   cellMenu() {
     Menu() {
       MenuItem({ startIcon: $r('app.media.ic_share'), content: '分享' })
-        .onChange((selected: boolean) => {
-          if (selected) {
-            this.onShare(this.record);
-          }
+        .onClick(() => {
+          this.onShare(this.record);
         })
       MenuItem({ startIcon: $r('app.media.ic_album'), content: '存相册' })
-        .onChange((selected: boolean) => {
-          if (selected) {
-            this.onSaveAlbum(this.record);
-          }
+        .onClick(() => {
+          this.onSaveAlbum(this.record);
         })
       MenuItem({ startIcon: $r('app.media.ic_timer'), content: '改寿命' })
         .subMenuBuilder(this.durationMenu)
       MenuItem({ startIcon: $r('app.media.ic_delete'), content: '删除' })
-        .onChange((selected: boolean) => {
-          if (selected) {
-            this.onDelete(this.record);
-          }
+        .onClick(() => {
+          this.onDelete(this.record);
         })
     }
   }
@@ -63,34 +57,24 @@ export struct PhotoGridItem {
   durationMenu() {
     Menu() {
       MenuItem({ content: '1小时' })
-        .onChange((selected: boolean) => {
-          if (selected) {
-            this.onDurationChange(this.record, DurationType.ONE_HOUR);
-          }
+        .onClick(() => {
+          this.onDurationChange(this.record, DurationType.ONE_HOUR);
         })
       MenuItem({ content: '今天' })
-        .onChange((selected: boolean) => {
-          if (selected) {
-            this.onDurationChange(this.record, DurationType.END_OF_TODAY);
-          }
+        .onClick(() => {
+          this.onDurationChange(this.record, DurationType.END_OF_TODAY);
         })
       MenuItem({ content: '3天' })
-        .onChange((selected: boolean) => {
-          if (selected) {
-            this.onDurationChange(this.record, DurationType.THREE_DAYS);
-          }
+        .onClick(() => {
+          this.onDurationChange(this.record, DurationType.THREE_DAYS);
         })
       MenuItem({ content: '7天' })
-        .onChange((selected: boolean) => {
-          if (selected) {
-            this.onDurationChange(this.record, DurationType.SEVEN_DAYS);
-          }
+        .onClick(() => {
+          this.onDurationChange(this.record, DurationType.SEVEN_DAYS);
         })
       MenuItem({ content: '永久' })
-        .onChange((selected: boolean) => {
-          if (selected) {
-            this.onDurationChange(this.record, DurationType.FOREVER);
-          }
+        .onClick(() => {
+          this.onDurationChange(this.record, DurationType.FOREVER);
         })
     }
   }

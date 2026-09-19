@@ -51,7 +51,27 @@ export class PhotoRepository {
     return DbHelper.listAll();
   }
 
-  static async makeForever(id: number): Promise<number> {
+  static async loadById(context: common.Context, id: number): Promise<PhotoRecord | undefined> {
+    await DbHelper.init(context);
+    return DbHelper.queryById(id);
+  }
+
+  static async setForever(context: common.Context, id: number): Promise<number> {
+    await DbHelper.init(context);
     return DbHelper.setForever(id);
+  }
+
+  // 改寿命统一以当前时间起算（与拍照口径一致），创建时间仅用于展示；返回新到期时间供页面同步
+  static async changeDuration(context: common.Context, id: number,
+    type: DurationType): Promise<number | undefined> {
+    await DbHelper.init(context);
+    const expireAt = ExpiryCalculator.calc(type, Date.now());
+    await DbHelper.updateExpire(id, expireAt, type);
+    return expireAt;
+  }
+
+  static async updateNote(context: common.Context, id: number, note: string): Promise<number> {
+    await DbHelper.init(context);
+    return DbHelper.updateNote(id, note);
   }
 }

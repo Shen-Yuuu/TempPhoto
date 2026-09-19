@@ -1,10 +1,9 @@
 import { common } from '@kit.AbilityKit';
 import { window, uiMaterial } from '@kit.ArkUI';
-import { DbHelper } from '../database/DbHelper';
 import { CleanupService } from '../service/CleanupService';
+import { PhotoRepository } from '../service/PhotoRepository';
 import { PhotoRecord } from '../model/PhotoRecord';
 import { DurationType, DurationLabel } from '../model/DurationType';
-import { ExpiryCalculator } from '../service/ExpiryCalculator';
 import { TimeUtil } from '../utils/TimeUtil';
 import { Theme } from '../utils/Theme';
 import { PressScaleModifier } from '../utils/PressScaleModifier';
@@ -57,10 +56,7 @@ struct DetailPage {
     this.context = this.getUIContext().getHostContext() as common.UIAbilityContext;
     const params = this.getUIContext().getRouter().getParams() as DetailParams;
     const id = params !== undefined && params.id !== undefined ? params.id : -1;
-    DbHelper.init(this.context)
-      .then(() => {
-        return DbHelper.queryById(id);
-      })
+    PhotoRepository.loadById(this.context, id)
       .then((r: PhotoRecord | undefined) => {
         if (r === undefined) {
           this.getUIContext().getPromptAction().showToast({ message: '照片不存在' });
@@ -155,7 +151,8 @@ struct DetailPage {
 
   private makeForever(): void {
     const target = this.record;
-    if (target === undefined) {
+    const ctx = this.context;
+    if (target === undefined || ctx === undefined) {
       return;
     }
     this.getUIContext().showAlertDialog({
@@ -170,7 +167,7 @@ struct DetailPage {
         value: '转永久',
         fontColor: '#E64A19',
         action: () => {
-          DbHelper.setForever(target.id)
+          PhotoRepository.setForever(ctx, target.id)
             .then(() => {
               target.expireAt = undefined;
               target.durationType = DurationType.FOREVER;
@@ -240,7 +237,7 @@ struct DetailPage {
     }
     this.getUIContext().showAlertDialog({
       title: '照片已分享',
-      message: '对方已收到照片，是否立即删除本地的这张照片？',
+      message: '照片已通过分享面板送出，是否立即删除本地的这张照片？',
       primaryButton: {
         value: '保留',
         action: () => {
@@ -281,12 +278,12 @@ struct DetailPage {
 
   private applyDuration(type: DurationType): void {
     const target = this.record;
-    if (target === undefined) {
+    const ctx = this.context;
+    if (target === undefined || ctx === undefined) {
       return;
     }
-    const expireAt = ExpiryCalculator.calc(type, Date.now());
-    DbHelper.updateExpire(target.id, expireAt, type)
-      .then(() => {
+    PhotoRepository.changeDuration(ctx, target.id, type)
+      .then((expireAt: number | undefined) => {
         target.expireAt = expireAt;
         target.durationType = type;
         this.showDurationDialog = false;
@@ -499,8 +496,9 @@ struct DetailPage {
                 })
                 .onBlur(() => {
                   const target = this.record;
-                  if (target !== undefined && this.noteDraft !== target.note) {
-                    DbHelper.updateNote(target.id, this.noteDraft)
+                  const ctx = this.context;
+                  if (target !== undefined && ctx !== undefined && this.noteDraft !== target.note) {
+                    PhotoRepository.updateNote(ctx, target.id, this.noteDraft)
                       .then(() => {
                         target.note = this.noteDraft;
                       })
@@ -545,7 +543,7 @@ struct DetailPage {
                   this.makeForever();
                 })
               this.actionCard($r('app.media.ic_timer'), '改寿命', Theme.INK2,
-                this.record.expireAt !== undefined, () => {
+                true, () => {
                   this.showDurationDialog = true;
                 })
               this.actionCard($r('app.media.ic_delete'), '删除', Theme.DANGER,

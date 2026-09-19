@@ -7,14 +7,22 @@ const TABLE = 'photos';
 
 export class DbHelper {
   private static store: relationalStore.RdbStore | undefined = undefined;
+  private static initPromise: Promise<void> | undefined = undefined;
 
   static async init(context: common.Context): Promise<void> {
     if (DbHelper.store !== undefined) {
       return;
     }
+    if (DbHelper.initPromise === undefined) {
+      DbHelper.initPromise = DbHelper.doInit(context);
+    }
+    await DbHelper.initPromise;
+  }
+
+  private static async doInit(context: common.Context): Promise<void> {
     const config: relationalStore.StoreConfig = {
       name: 'tempphoto.db',
-      securityLevel: relationalStore.SecurityLevel.S1
+      securityLevel: relationalStore.SecurityLevel.S2
     };
     try {
       const store = await relationalStore.getRdbStore(context, config);
@@ -29,6 +37,8 @@ export class DbHelper {
       await store.executeSql(`CREATE INDEX IF NOT EXISTS idx_photos_created ON ${TABLE}(created_at DESC)`);
       DbHelper.store = store;
     } catch (error) {
+      // 初始化失败后清除缓存 Promise，允许下次调用重试
+      DbHelper.initPromise = undefined;
       throw error as Error;
     }
   }

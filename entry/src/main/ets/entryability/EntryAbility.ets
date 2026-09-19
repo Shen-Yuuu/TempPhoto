@@ -3,6 +3,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { CleanupService } from '../service/CleanupService';
+import { WorkSchedulerGuard } from '../service/WorkSchedulerGuard';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility';
@@ -15,6 +16,8 @@ export default class EntryAbility extends UIAbility {
       hilog.error(DOMAIN, TAG, 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
     hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onCreate');
+    // 延迟任务不随设备重启保留，冷启动时补注册，避免重启后后台静默清理失效
+    WorkSchedulerGuard.ensureRegistered(this.context);
     this.runStartupSweep();
   }
 

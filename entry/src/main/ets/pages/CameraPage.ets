@@ -14,6 +14,39 @@ import { PressScaleModifier } from '../utils/PressScaleModifier';
 const PREF_NAME = 'camera_settings';
 const KEY_LAST_DURATION = 'last_duration';
 
+// 预览分辨率取与屏幕长宽比最接近的档位，避免取景画面拉伸；比例相同选分辨率更高的一档
+function pickPreviewProfile(profiles: Array<camera.Profile>): camera.Profile {
+  if (profiles.length === 0) {
+    throw new Error('no preview profile supported');
+  }
+  let targetRatio = 0.46;
+  try {
+    const dsp = display.getDefaultDisplaySync();
+    targetRatio = normalizedRatio(dsp.width, dsp.height);
+  } catch (error) {
+  }
+  let best = profiles[0];
+  let bestScore = Number.MAX_VALUE;
+  for (const p of profiles) {
+    const ratio = normalizedRatio(p.size.width, p.size.height);
+    const diff = Math.abs(ratio - targetRatio);
+    const pixels = p.size.width * p.size.height;
+    const score = diff - pixels / 1e10;
+    if (score < bestScore) {
+      bestScore = score;
+      best = p;
+    }
+  }
+  return best;
+}
+
+function normalizedRatio(w: number, h: number): number {
+  if (w <= 0 || h <= 0) {
+    return 1;
+  }
+  return w > h ? w / h : h / w;
+}
+
 @Entry
 @ComponentV2
 struct CameraPage {
@@ -198,7 +231,7 @@ struct CameraPage {
         device = devices[0];
       }
       const capability = this.cameraManager.getSupportedOutputCapability(device, camera.SceneMode.NORMAL_PHOTO);
-      const previewProfile = capability.previewProfiles[0];
+      const previewProfile = pickPreviewProfile(capability.previewProfiles);
       const photoProfile = capability.photoProfiles[0];
       this.cameraInput = this.cameraManager.createCameraInput(device);
       await this.cameraInput.open();
@@ -336,13 +369,25 @@ struct CameraPage {
     try {
       const setting: camera.PhotoCaptureSetting = {
         quality: camera.QualityLevel.QUALITY_LEVEL_HIGH,
-        rotation: camera.ImageRotation.ROTATION_0
+        rotation: this.detectRotation()
       };
       this.photoOutput.capture(setting);
     } catch (error) {
       const err = error as BusinessError;
       this.toast(`拍照失败: ${err.code}`);
     }
+  }
+
+  // 由系统按当前设备方向计算照片旋转角（API 23+ 可无参调用），避免竖拍照片横倒
+  private detectRotation(): camera.ImageRotation {
+    try {
+      const detected = this.photoOutput?.getPhotoRotation();
+      if (detected !== undefined) {
+        return detected;
+      }
+    } catch (error) {
+    }
+    return camera.ImageRotation.ROTATION_0;
   }
 
   private async switchCamera(): Promise<void> {

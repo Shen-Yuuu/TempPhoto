@@ -24,9 +24,15 @@ export class ShareService {
       const paths: Array<string> = [];
       for (const r of records) {
         const absolutePath = `${context.filesDir}/${r.filePath}`;
-        if (!fs.accessSync(absolutePath)) {
-          resolve(false);
-          return;
+        let exists = false;
+        try {
+          exists = fs.accessSync(absolutePath);
+        } catch (err) {
+          exists = false;
+        }
+        if (!exists) {
+          // 文件缺失属于真实失败，需让调用方提示用户，而非静默当作取消
+          throw new Error(`photo file missing: ${r.filePath}`);
         }
         paths.push(absolutePath);
       }

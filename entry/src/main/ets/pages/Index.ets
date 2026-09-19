@@ -4,8 +4,6 @@ import { PhotoRepository } from '../service/PhotoRepository';
 import { PhotoRecord } from '../model/PhotoRecord';
 import { DetailParams } from '../model/RouteParams';
 import { DurationType } from '../model/DurationType';
-import { ExpiryCalculator } from '../service/ExpiryCalculator';
-import { DbHelper } from '../database/DbHelper';
 import { TimeUtil } from '../utils/TimeUtil';
 import { Theme } from '../utils/Theme';
 import { PressScaleModifier } from '../utils/PressScaleModifier';
@@ -20,7 +18,7 @@ struct Index {
   @Local photos: Array<PhotoRecord> = [];
   @Local now: number = Date.now();
   @Local refreshing: boolean = false;
-  @Local selectArmed: boolean = true;
+  @Local selectArmed: boolean = false;
   @Local editing: boolean = false;
   @Local selectedIds: Set<number> = new Set<number>();
   @Local breath: boolean = false;
@@ -123,9 +121,9 @@ struct Index {
     }
   }
 
-  private refresh(): void {
+  private refresh(): Promise<void> {
     const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    PhotoRepository.loadAll(ctx)
+    return PhotoRepository.loadAll(ctx)
       .then((list: Array<PhotoRecord>) => {
         this.photos = list;
       })
@@ -150,11 +148,7 @@ struct Index {
 
   private changeDuration(r: PhotoRecord, t: DurationType): void {
     const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    const expireAt = ExpiryCalculator.calc(t, Date.now());
-    DbHelper.init(ctx)
-      .then(() => {
-        return DbHelper.updateExpire(r.id, expireAt, t);
-      })
+    PhotoRepository.changeDuration(ctx, r.id, t)
       .then(() => {
         this.refresh();
         this.getUIContext().getPromptAction().showToast({
@@ -257,7 +251,7 @@ struct Index {
     const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
     this.getUIContext().showAlertDialog({
       title: '照片已分享',
-      message: '对方已收到照片，是否立即删除本地的这张照片？',
+      message: '照片已通过分享面板送出，是否立即删除本地的这张照片？',
       primaryButton: {
         value: '保留',
         action: () => {
@@ -598,8 +592,9 @@ struct Index {
         .maxPullDownDistance(120)
         .onRefreshing(() => {
           this.now = Date.now();
-          this.refresh();
-          this.refreshing = false;
+          this.refresh().finally(() => {
+            this.refreshing = false;
+          });
         })
 
         if (this.editing) {
